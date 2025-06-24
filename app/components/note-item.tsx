@@ -96,7 +96,13 @@ export function NoteItem({ note, onDelete }: NoteItemProps) {
             {note.text}
           </Text>
           <Text style={styles.timestamp}>
-            {note.createdAt.toLocaleDateString()}
+            {note.createdAt.toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </Text>
         </Animated.View>
       </GestureDetector>
