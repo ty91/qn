@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Keyboard,
   ScrollView,
@@ -19,14 +19,18 @@ interface NoteEditorProps {
   visible: boolean;
   onClose: () => void;
   onSave: (text: string) => void;
+  onAutoSave: (text: string) => void;
   initialText?: string;
+  mode?: "create" | "edit";
 }
 
 export function NoteEditor({
   visible,
   onClose,
   onSave,
+  onAutoSave,
   initialText = "",
+  mode = "create",
 }: NoteEditorProps) {
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = React.useState("");
@@ -49,6 +53,14 @@ export function NoteEditor({
       Keyboard.dismiss();
     }
   };
+
+  // Handle text changes
+  const handleTextChange = useCallback((newText: string) => {
+    setText(newText);
+    if (mode === "edit") {
+      onAutoSave(newText);
+    }
+  }, [mode, onAutoSave]);
 
   const handleClose = () => {
     setText("");
@@ -94,33 +106,46 @@ export function NoteEditor({
             <TextInput
               ref={inputRef}
               style={styles.input}
-              placeholder="무슨 생각을 하고 계신가요?"
+              placeholder={
+                mode === "create" ? "무슨 생각을 하고 계신가요?" : ""
+              }
               placeholderTextColor="#999"
               multiline
               value={text}
-              onChangeText={setText}
+              onChangeText={handleTextChange}
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <View style={styles.actions}>
-              <TouchableWithoutFeedback onPress={handleClose}>
-                <View style={styles.button}>
-                  <Text style={styles.cancelText}>취소</Text>
-                </View>
-              </TouchableWithoutFeedback>
-              <TouchableWithoutFeedback
-                onPress={handleSave}
-                disabled={!text.trim()}
-              >
-                <View style={[styles.button, styles.saveButton, !text.trim() && styles.disabledButton]}>
-                  <Text
-                    style={[styles.saveText, !text.trim() && styles.disabledText]}
+            {mode === "create" && (
+              <View style={styles.actions}>
+                <TouchableWithoutFeedback onPress={handleClose}>
+                  <View style={styles.button}>
+                    <Text style={styles.cancelText}>취소</Text>
+                  </View>
+                </TouchableWithoutFeedback>
+                <TouchableWithoutFeedback
+                  onPress={handleSave}
+                  disabled={!text.trim()}
+                >
+                  <View
+                    style={[
+                      styles.button,
+                      styles.saveButton,
+                      !text.trim() && styles.disabledButton,
+                    ]}
                   >
-                    저장
-                  </Text>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
+                    <Text
+                      style={[
+                        styles.saveText,
+                        !text.trim() && styles.disabledText,
+                      ]}
+                    >
+                      저장
+                    </Text>
+                  </View>
+                </TouchableWithoutFeedback>
+              </View>
+            )}
           </View>
         </ScrollView>
       </Animated.View>
@@ -151,7 +176,7 @@ const styles = StyleSheet.create({
   },
   editor: {
     backgroundColor: "#fff",
-    marginHorizontal: 20,
+    marginHorizontal: 12,
     marginBottom: 20,
     borderRadius: 16,
     padding: 20,
