@@ -20,7 +20,6 @@ interface NoteEditorProps {
   onSave: (text: string) => void;
   onAutoSave: (text: string) => void;
   initialText?: string;
-  mode?: "create" | "edit";
 }
 
 export function NoteEditor({
@@ -29,7 +28,6 @@ export function NoteEditor({
   onSave,
   onAutoSave,
   initialText = "",
-  mode = "create",
 }: NoteEditorProps) {
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = React.useState("");
@@ -55,11 +53,9 @@ export function NoteEditor({
   const handleTextChange = useCallback(
     (newText: string) => {
       setText(newText);
-      if (mode === "edit") {
-        onAutoSave(newText);
-      }
+      onAutoSave(newText);
     },
-    [mode, onAutoSave]
+    [onAutoSave]
   );
 
   const handleClose = () => {
@@ -100,7 +96,7 @@ export function NoteEditor({
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder={mode === "create" ? "무슨 생각을 하고 계신가요?" : ""}
+            placeholder="무슨 생각을 하고 계신가요?"
             placeholderTextColor="#999"
             multiline
             value={text}
@@ -108,28 +104,13 @@ export function NoteEditor({
             autoCapitalize="none"
             autoCorrect={false}
           />
-          {mode === "create" && (
-            <View style={styles.actions}>
-              <TouchableWithoutFeedback onPress={handleClose}>
-                <View style={styles.button}>
-                  <Text style={styles.cancelText}>취소</Text>
-                </View>
-              </TouchableWithoutFeedback>
-              <TouchableWithoutFeedback onPress={handleSave} disabled={!text}>
-                <View
-                  style={[
-                    styles.button,
-                    styles.saveButton,
-                    !text && styles.disabledButton,
-                  ]}
-                >
-                  <Text style={[styles.saveText, !text && styles.disabledText]}>
-                    저장
-                  </Text>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          )}
+          <View style={styles.actions}>
+            <TouchableWithoutFeedback onPress={handleSave}>
+              <View style={[styles.button, styles.saveButton]}>
+                <Text style={styles.saveText}>완료</Text>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
         </View>
       </Animated.View>
     </>

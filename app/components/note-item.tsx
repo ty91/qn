@@ -28,12 +28,11 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
     }
   };
 
-  const tapGesture = Gesture.Tap()
-    .onEnd(() => {
-      if (onTap) {
-        runOnJS(onTap)(note);
-      }
-    });
+  const tapGesture = Gesture.Tap().onEnd(() => {
+    if (onTap) {
+      runOnJS(onTap)(note);
+    }
+  });
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])

@@ -1,17 +1,22 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Note } from '@/types/note';
+import { Note } from "@/types/note";
+import React, { createContext, useCallback, useContext, useState } from "react";
 
 interface NoteEditorContextType {
   isVisible: boolean;
   editingNote: Note | null;
-  mode: 'create' | 'edit';
   openEditor: (note?: Note) => void;
   closeEditor: () => void;
 }
 
-const NoteEditorContext = createContext<NoteEditorContextType | undefined>(undefined);
+const NoteEditorContext = createContext<NoteEditorContextType | undefined>(
+  undefined
+);
 
-export function NoteEditorProvider({ children }: { children: React.ReactNode }) {
+export function NoteEditorProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [isVisible, setIsVisible] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 
@@ -28,16 +33,13 @@ export function NoteEditorProvider({ children }: { children: React.ReactNode }) 
     }, 300);
   }, []);
 
-  const mode = editingNote ? 'edit' : 'create';
-
   return (
-    <NoteEditorContext.Provider 
-      value={{ 
-        isVisible, 
-        editingNote, 
-        mode, 
-        openEditor, 
-        closeEditor 
+    <NoteEditorContext.Provider
+      value={{
+        isVisible,
+        editingNote,
+        openEditor,
+        closeEditor,
       }}
     >
       {children}
@@ -48,7 +50,9 @@ export function NoteEditorProvider({ children }: { children: React.ReactNode }) 
 export function useNoteEditorContext() {
   const context = useContext(NoteEditorContext);
   if (!context) {
-    throw new Error('useNoteEditorContext must be used within a NoteEditorProvider');
+    throw new Error(
+      "useNoteEditorContext must be used within a NoteEditorProvider"
+    );
   }
   return context;
 }

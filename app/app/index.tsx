@@ -1,20 +1,23 @@
 import { FloatingButton } from "@/components/floating-button";
 import { NoteEditor } from "@/components/note-editor";
 import { NoteItem } from "@/components/note-item";
+import {
+  NoteEditorProvider,
+  useNoteEditorContext,
+} from "@/contexts/note-editor-context";
+import { useNoteEditor } from "@/hooks/use-note-editor";
 import { database } from "@/services/database";
 import { Note } from "@/types/note";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NoteEditorProvider, useNoteEditorContext } from "@/contexts/note-editor-context";
-import { useNoteEditor } from "@/hooks/use-note-editor";
 
 function HomeScreenContent() {
   const insets = useSafeAreaInsets();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isVisible, mode, openEditor } = useNoteEditorContext();
+  const { isVisible, openEditor } = useNoteEditorContext();
 
   useEffect(() => {
     loadNotes();
@@ -33,21 +36,12 @@ function HomeScreenContent() {
   };
 
   const handleCreateNote = useCallback((note: Note) => {
-    setNotes(prev => [note, ...prev]);
+    setNotes((prev) => [note, ...prev]);
   }, []);
 
   const handleUpdateNote = useCallback((note: Note) => {
-    setNotes(prev => prev.map(n => n.id === note.id ? note : n));
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
   }, []);
-
-  const { handleSave, handleAutoSave, handleClose, initialText } = useNoteEditor({
-    onCreateNote: handleCreateNote,
-    onUpdateNote: handleUpdateNote,
-  });
-
-  const handleAddNote = () => {
-    openEditor();
-  };
 
   const handleDeleteNote = async (id: string) => {
     try {
@@ -55,6 +49,26 @@ function HomeScreenContent() {
       setNotes(notes.filter((note) => note.id !== id));
     } catch (error) {
       console.error("Failed to delete note:", error);
+    }
+  };
+
+  const { handleSave, handleAutoSave, handleClose, initialText } =
+    useNoteEditor({
+      onCreateNote: handleCreateNote,
+      onUpdateNote: handleUpdateNote,
+      onDeleteNote: handleDeleteNote,
+    });
+
+  const handleAddNote = async () => {
+    try {
+      // Create an empty note first
+      const newNote = await database.createNote("");
+      // Add to notes list
+      setNotes((prev) => [newNote, ...prev]);
+      // Open editor with the new note
+      openEditor(newNote);
+    } catch (error) {
+      console.error("Failed to create note:", error);
     }
   };
 
@@ -100,7 +114,6 @@ function HomeScreenContent() {
           onSave={handleSave}
           onAutoSave={handleAutoSave}
           initialText={initialText}
-          mode={mode}
         />
       </View>
     </GestureHandlerRootView>
