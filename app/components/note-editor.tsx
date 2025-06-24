@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import {
   Keyboard,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -47,20 +46,21 @@ export function NoteEditor({
   }, [visible, initialText]);
 
   const handleSave = () => {
-    if (text.trim()) {
-      onSave(text.trim());
-      setText("");
-      Keyboard.dismiss();
-    }
+    onSave(text);
+    setText("");
+    Keyboard.dismiss();
   };
 
   // Handle text changes
-  const handleTextChange = useCallback((newText: string) => {
-    setText(newText);
-    if (mode === "edit") {
-      onAutoSave(newText);
-    }
-  }, [mode, onAutoSave]);
+  const handleTextChange = useCallback(
+    (newText: string) => {
+      setText(newText);
+      if (mode === "edit") {
+        onAutoSave(newText);
+      }
+    },
+    [mode, onAutoSave]
+  );
 
   const handleClose = () => {
     setText("");
@@ -96,58 +96,41 @@ export function NoteEditor({
         </TouchableWithoutFeedback>
       </Animated.View>
       <Animated.View style={[styles.container, animatedStyle]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          scrollEnabled={false}
-        >
-          <View style={styles.editor}>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              placeholder={
-                mode === "create" ? "무슨 생각을 하고 계신가요?" : ""
-              }
-              placeholderTextColor="#999"
-              multiline
-              value={text}
-              onChangeText={handleTextChange}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {mode === "create" && (
-              <View style={styles.actions}>
-                <TouchableWithoutFeedback onPress={handleClose}>
-                  <View style={styles.button}>
-                    <Text style={styles.cancelText}>취소</Text>
-                  </View>
-                </TouchableWithoutFeedback>
-                <TouchableWithoutFeedback
-                  onPress={handleSave}
-                  disabled={!text.trim()}
+        <View style={styles.editor}>
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            placeholder={mode === "create" ? "무슨 생각을 하고 계신가요?" : ""}
+            placeholderTextColor="#999"
+            multiline
+            value={text}
+            onChangeText={handleTextChange}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {mode === "create" && (
+            <View style={styles.actions}>
+              <TouchableWithoutFeedback onPress={handleClose}>
+                <View style={styles.button}>
+                  <Text style={styles.cancelText}>취소</Text>
+                </View>
+              </TouchableWithoutFeedback>
+              <TouchableWithoutFeedback onPress={handleSave} disabled={!text}>
+                <View
+                  style={[
+                    styles.button,
+                    styles.saveButton,
+                    !text && styles.disabledButton,
+                  ]}
                 >
-                  <View
-                    style={[
-                      styles.button,
-                      styles.saveButton,
-                      !text.trim() && styles.disabledButton,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.saveText,
-                        !text.trim() && styles.disabledText,
-                      ]}
-                    >
-                      저장
-                    </Text>
-                  </View>
-                </TouchableWithoutFeedback>
-              </View>
-            )}
-          </View>
-        </ScrollView>
+                  <Text style={[styles.saveText, !text && styles.disabledText]}>
+                    저장
+                  </Text>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          )}
+        </View>
       </Animated.View>
     </>
   );

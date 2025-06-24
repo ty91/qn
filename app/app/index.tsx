@@ -90,7 +90,8 @@ function HomeScreenContent() {
             />
           )}
           contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
+          pointerEvents={isVisible ? "none" : "auto"}
         />
         <FloatingButton onPress={handleAddNote} />
         <NoteEditor

@@ -21,7 +21,6 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
   const wrapperHeight = useSharedValue(80);
   const wrapperOpacity = useSharedValue(1);
   const deleteContainerHeight = useSharedValue(80);
-  const isPanning = useSharedValue(false);
 
   const handleDelete = () => {
     if (onDelete) {
@@ -31,7 +30,7 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
 
   const tapGesture = Gesture.Tap()
     .onEnd(() => {
-      if (onTap && !isPanning.value) {
+      if (onTap) {
         runOnJS(onTap)(note);
       }
     });
@@ -39,9 +38,6 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
     .failOffsetY([-10, 10])
-    .onBegin(() => {
-      isPanning.value = true;
-    })
     .onUpdate((event) => {
       translateX.value = Math.min(0, event.translationX);
     })
@@ -59,13 +55,9 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
           overshootClamping: true,
         });
       }
-      isPanning.value = false;
-    })
-    .onFinalize(() => {
-      isPanning.value = false;
     });
 
-  const gesture = Gesture.Race(panGesture, tapGesture);
+  const gesture = Gesture.Exclusive(panGesture, tapGesture);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
