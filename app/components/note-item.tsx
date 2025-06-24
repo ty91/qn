@@ -101,8 +101,8 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
       </View>
       <GestureDetector gesture={gesture}>
         <Animated.View style={[styles.container, animatedStyle]}>
-          <Text style={styles.text} numberOfLines={2}>
-            {note.text}
+          <Text style={styles.text} numberOfLines={1} ellipsizeMode="tail">
+            {note.text ? note.text.replace(/\n/g, " ") : "빈 노트"}
           </Text>
           <Text style={styles.timestamp}>
             {note.createdAt.toLocaleDateString("ko-KR", {

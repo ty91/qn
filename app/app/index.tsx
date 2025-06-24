@@ -52,12 +52,11 @@ function HomeScreenContent() {
     }
   };
 
-  const { handleSave, handleAutoSave, handleClose, initialText } =
-    useNoteEditor({
-      onCreateNote: handleCreateNote,
-      onUpdateNote: handleUpdateNote,
-      onDeleteNote: handleDeleteNote,
-    });
+  const { handleSave, handleAutoSave, initialText } = useNoteEditor({
+    onCreateNote: handleCreateNote,
+    onUpdateNote: handleUpdateNote,
+    onDeleteNote: handleDeleteNote,
+  });
 
   const handleAddNote = async () => {
     try {
@@ -110,7 +109,6 @@ function HomeScreenContent() {
         <FloatingButton onPress={handleAddNote} />
         <NoteEditor
           visible={isVisible}
-          onClose={handleClose}
           onSave={handleSave}
           onAutoSave={handleAutoSave}
           initialText={initialText}

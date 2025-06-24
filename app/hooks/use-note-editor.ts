@@ -22,22 +22,16 @@ export function useNoteEditor({
     async (text: string) => {
       try {
         if (editingNote) {
-          if (text.trim()) {
-            // Update the note and close editor
-            const updatedNote = await database.updateNote(editingNote.id, text);
-            onUpdateNote(updatedNote);
-          } else {
-            // Delete empty note
-            await database.deleteNote(editingNote.id);
-            onDeleteNote(editingNote.id);
-          }
+          // Update the note and close editor
+          const updatedNote = await database.updateNote(editingNote.id, text);
+          onUpdateNote(updatedNote);
           closeEditor();
         }
       } catch (error) {
         console.error("Failed to save note:", error);
       }
     },
-    [editingNote, onUpdateNote, onDeleteNote, closeEditor]
+    [editingNote, onUpdateNote, closeEditor]
   );
 
   const handleAutoSave = useCallback(
@@ -74,21 +68,13 @@ export function useNoteEditor({
 
     if (editingNote) {
       try {
-        // Save pending text or delete if empty
-        const finalText = pendingTextRef.current || editingNote.text;
-        if (finalText.trim()) {
-          // Save if there's content
-          if (pendingTextRef.current) {
-            const updatedNote = await database.updateNote(
-              editingNote.id,
-              pendingTextRef.current
-            );
-            onUpdateNote(updatedNote);
-          }
-        } else {
-          // Delete if empty
-          await database.deleteNote(editingNote.id);
-          onDeleteNote(editingNote.id);
+        // Save pending text
+        if (pendingTextRef.current) {
+          const updatedNote = await database.updateNote(
+            editingNote.id,
+            pendingTextRef.current
+          );
+          onUpdateNote(updatedNote);
         }
       } catch (error) {
         console.error("Failed to handle close:", error);
@@ -97,7 +83,7 @@ export function useNoteEditor({
 
     pendingTextRef.current = "";
     closeEditor();
-  }, [editingNote, onUpdateNote, onDeleteNote, closeEditor]);
+  }, [editingNote, onUpdateNote, closeEditor]);
 
   return {
     handleSave,

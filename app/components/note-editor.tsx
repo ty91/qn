@@ -16,7 +16,6 @@ import Animated, {
 
 interface NoteEditorProps {
   visible: boolean;
-  onClose: () => void;
   onSave: (text: string) => void;
   onAutoSave: (text: string) => void;
   initialText?: string;
@@ -24,7 +23,6 @@ interface NoteEditorProps {
 
 export function NoteEditor({
   visible,
-  onClose,
   onSave,
   onAutoSave,
   initialText = "",
@@ -58,12 +56,6 @@ export function NoteEditor({
     [onAutoSave]
   );
 
-  const handleClose = () => {
-    setText("");
-    Keyboard.dismiss();
-    onClose();
-  };
-
   // 키보드 높이에 따른 opacity를 derived value로 계산
   const opacity = useDerivedValue(() => {
     return interpolate(keyboard.height.value, [0, 300], [0, 1]);
@@ -87,7 +79,7 @@ export function NoteEditor({
   return (
     <>
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <TouchableWithoutFeedback onPress={handleClose}>
+        <TouchableWithoutFeedback onPress={handleSave}>
           <View style={StyleSheet.absoluteFillObject} />
         </TouchableWithoutFeedback>
       </Animated.View>
