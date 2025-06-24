@@ -58,7 +58,7 @@ export class DatabaseService {
     };
   }
 
-  async updateNote(id: string, text: string): Promise<void> {
+  async updateNote(id: string, text: string): Promise<Note> {
     const now = Date.now();
 
     this.db.runSync(
@@ -67,6 +67,24 @@ export class DatabaseService {
       now,
       id
     );
+
+    const result = this.db.getFirstSync<{
+      id: string;
+      text: string;
+      createdAt: number;
+      updatedAt: number;
+    }>("SELECT * FROM notes WHERE id = ?", id);
+
+    if (!result) {
+      throw new Error(`Note with id ${id} not found`);
+    }
+
+    return {
+      id: result.id,
+      text: result.text,
+      createdAt: new Date(result.createdAt),
+      updatedAt: new Date(result.updatedAt),
+    };
   }
 
   async deleteNote(id: string): Promise<void> {

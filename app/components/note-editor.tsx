@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import {
   Keyboard,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import Animated, {
@@ -14,26 +15,32 @@ import Animated, {
   useDerivedValue,
 } from "react-native-reanimated";
 
-interface NoteCreatorProps {
+interface NoteEditorProps {
   visible: boolean;
   onClose: () => void;
   onSave: (text: string) => void;
+  initialText?: string;
 }
 
-export function NoteCreator({ visible, onClose, onSave }: NoteCreatorProps) {
+export function NoteEditor({
+  visible,
+  onClose,
+  onSave,
+  initialText = "",
+}: NoteEditorProps) {
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = React.useState("");
   const keyboard = useAnimatedKeyboard();
 
   useEffect(() => {
     if (visible) {
-      setText("");
+      setText(initialText);
 
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [visible]);
+  }, [visible, initialText]);
 
   const handleSave = () => {
     if (text.trim()) {
@@ -72,42 +79,50 @@ export function NoteCreator({ visible, onClose, onSave }: NoteCreatorProps) {
   return (
     <>
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFillObject}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
+        <TouchableWithoutFeedback onPress={handleClose}>
+          <View style={StyleSheet.absoluteFillObject} />
+        </TouchableWithoutFeedback>
       </Animated.View>
       <Animated.View style={[styles.container, animatedStyle]}>
-        <View style={styles.editor}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder="무슨 생각을 하고 계신가요?"
-            placeholderTextColor="#999"
-            multiline
-            value={text}
-            onChangeText={setText}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <View style={styles.actions}>
-            <TouchableOpacity onPress={handleClose} style={styles.button}>
-              <Text style={styles.cancelText}>취소</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSave}
-              style={[styles.button, styles.saveButton]}
-              disabled={!text.trim()}
-            >
-              <Text
-                style={[styles.saveText, !text.trim() && styles.disabledText]}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={false}
+        >
+          <View style={styles.editor}>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder="무슨 생각을 하고 계신가요?"
+              placeholderTextColor="#999"
+              multiline
+              value={text}
+              onChangeText={setText}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.actions}>
+              <TouchableWithoutFeedback onPress={handleClose}>
+                <View style={styles.button}>
+                  <Text style={styles.cancelText}>취소</Text>
+                </View>
+              </TouchableWithoutFeedback>
+              <TouchableWithoutFeedback
+                onPress={handleSave}
+                disabled={!text.trim()}
               >
-                저장
-              </Text>
-            </TouchableOpacity>
+                <View style={[styles.button, styles.saveButton, !text.trim() && styles.disabledButton]}>
+                  <Text
+                    style={[styles.saveText, !text.trim() && styles.disabledText]}
+                  >
+                    저장
+                  </Text>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </Animated.View>
     </>
   );
@@ -127,6 +142,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   editor: {
     backgroundColor: "#fff",
@@ -167,5 +188,8 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     opacity: 0.5,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

@@ -12,9 +12,10 @@ import Animated, {
 interface NoteItemProps {
   note: Note;
   onDelete?: (id: string) => void;
+  onTap?: (note: Note) => void;
 }
 
-export function NoteItem({ note, onDelete }: NoteItemProps) {
+export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
   const translateX = useSharedValue(0);
   const containerHeight = useSharedValue(80);
   const wrapperHeight = useSharedValue(80);
@@ -27,7 +28,14 @@ export function NoteItem({ note, onDelete }: NoteItemProps) {
     }
   };
 
-  const gesture = Gesture.Pan()
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      if (onTap) {
+        runOnJS(onTap)(note);
+      }
+    });
+
+  const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
     .failOffsetY([-10, 10])
     .onUpdate((event) => {
@@ -48,6 +56,8 @@ export function NoteItem({ note, onDelete }: NoteItemProps) {
         });
       }
     });
+
+  const gesture = Gesture.Simultaneous(tapGesture, panGesture);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

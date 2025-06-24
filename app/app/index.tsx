@@ -1,5 +1,5 @@
 import { FloatingButton } from "@/components/floating-button";
-import { NoteCreator } from "@/components/note-creator";
+import { NoteEditor } from "@/components/note-editor";
 import { NoteItem } from "@/components/note-item";
 import { database } from "@/services/database";
 import { Note } from "@/types/note";
@@ -13,6 +13,7 @@ export default function HomeScreen() {
   const [showCreator, setShowCreator] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   useEffect(() => {
     loadNotes();
@@ -36,12 +37,21 @@ export default function HomeScreen() {
 
   const handleCloseCreator = () => {
     setShowCreator(false);
+    setEditingNote(null);
   };
 
   const handleSaveNote = async (text: string) => {
     try {
-      const newNote = await database.createNote(text);
-      setNotes([newNote, ...notes]);
+      if (editingNote) {
+        const updatedNote = await database.updateNote(editingNote.id, text);
+        setNotes(
+          notes.map((note) => (note.id === editingNote.id ? updatedNote : note))
+        );
+        setEditingNote(null);
+      } else {
+        const newNote = await database.createNote(text);
+        setNotes([newNote, ...notes]);
+      }
       setShowCreator(false);
     } catch (error) {
       console.error("Failed to save note:", error);
@@ -55,6 +65,11 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Failed to delete note:", error);
     }
+  };
+
+  const handleTapNote = (note: Note) => {
+    setEditingNote(note);
+    setShowCreator(true);
   };
 
   if (loading) {
@@ -78,15 +93,21 @@ export default function HomeScreen() {
           data={notes}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <NoteItem note={item} onDelete={handleDeleteNote} />
+            <NoteItem
+              note={item}
+              onDelete={handleDeleteNote}
+              onTap={handleTapNote}
+            />
           )}
           contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
         />
         <FloatingButton onPress={handleAddNote} />
-        <NoteCreator
+        <NoteEditor
           visible={showCreator}
           onClose={handleCloseCreator}
           onSave={handleSaveNote}
+          initialText={editingNote?.text || ""}
         />
       </View>
     </GestureHandlerRootView>
