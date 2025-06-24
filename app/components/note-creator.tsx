@@ -1,14 +1,18 @@
-import React, { useEffect, useRef } from 'react';
-import { 
-  StyleSheet, 
-  TextInput, 
-  View, 
-  TouchableOpacity, 
+import React, { useEffect, useRef } from "react";
+import {
+  Keyboard,
+  StyleSheet,
   Text,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard
-} from 'react-native';
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, {
+  interpolate,
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+  useDerivedValue,
+} from "react-native-reanimated";
 
 interface NoteCreatorProps {
   visible: boolean;
@@ -18,11 +22,13 @@ interface NoteCreatorProps {
 
 export function NoteCreator({ visible, onClose, onSave }: NoteCreatorProps) {
   const inputRef = useRef<TextInput>(null);
-  const [text, setText] = React.useState('');
+  const [text, setText] = React.useState("");
+  const keyboard = useAnimatedKeyboard();
 
   useEffect(() => {
     if (visible) {
-      setText('');
+      setText("");
+
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
@@ -32,30 +38,47 @@ export function NoteCreator({ visible, onClose, onSave }: NoteCreatorProps) {
   const handleSave = () => {
     if (text.trim()) {
       onSave(text.trim());
-      setText('');
+      setText("");
       Keyboard.dismiss();
     }
   };
 
   const handleClose = () => {
-    setText('');
+    setText("");
     Keyboard.dismiss();
     onClose();
   };
+
+  // 키보드 높이에 따른 opacity를 derived value로 계산
+  const opacity = useDerivedValue(() => {
+    return interpolate(keyboard.height.value, [0, 300], [0, 1]);
+  });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      marginBottom: keyboard.height.value,
+      opacity: opacity.value,
+    };
+  });
+
+  const backdropStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value * 0.3, // backdrop은 30% opacity
+    };
+  });
 
   if (!visible) return null;
 
   return (
     <>
-      <TouchableOpacity 
-        style={styles.backdrop} 
-        activeOpacity={1} 
-        onPress={handleClose}
-      />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+      <Animated.View style={[styles.backdrop, backdropStyle]}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+      </Animated.View>
+      <Animated.View style={[styles.container, animatedStyle]}>
         <View style={styles.editor}>
           <TextInput
             ref={inputRef}
@@ -72,63 +95,56 @@ export function NoteCreator({ visible, onClose, onSave }: NoteCreatorProps) {
             <TouchableOpacity onPress={handleClose} style={styles.button}>
               <Text style={styles.cancelText}>취소</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handleSave} 
+            <TouchableOpacity
+              onPress={handleSave}
               style={[styles.button, styles.saveButton]}
               disabled={!text.trim()}
             >
-              <Text style={[styles.saveText, !text.trim() && styles.disabledText]}>
+              <Text
+                style={[styles.saveText, !text.trim() && styles.disabledText]}
+              >
                 저장
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </Animated.View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   container: {
-    position: 'absolute',
-    top: 0,
+    position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    height: '33%',
   },
   editor: {
-    flex: 1,
-    backgroundColor: '#fff',
-    marginTop: 60,
+    backgroundColor: "#fff",
     marginHorizontal: 20,
+    marginBottom: 20,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
+    minHeight: 150,
   },
   input: {
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 12,
     marginTop: 16,
   },
@@ -137,17 +153,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     borderRadius: 8,
   },
   cancelText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   saveText: {
     fontSize: 16,
-    color: '#fff',
-    fontWeight: '500',
+    color: "#fff",
+    fontWeight: "500",
   },
   disabledText: {
     opacity: 0.5,
