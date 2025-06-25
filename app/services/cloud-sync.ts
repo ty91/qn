@@ -1,5 +1,5 @@
 import * as FileSystem from "expo-file-system";
-import { CloudStorage } from "react-native-cloud-storage";
+import { CloudStorage, CloudStorageScope } from "react-native-cloud-storage";
 
 export interface SyncStatus {
   isAvailable: boolean;
@@ -10,23 +10,36 @@ export interface SyncStatus {
 }
 
 export class CloudSyncService {
-  private static readonly DB_BACKUP_FILENAME = "database.db";
-  private static readonly SYNC_METADATA_KEY = "sync-metadata.json";
-  private static readonly SYNC_INTERVAL = 2 * 60 * 1000; // 2분
+  private static readonly DB_BACKUP_FILENAME = "Documents/database.db";
+  private static readonly SYNC_METADATA_KEY = "Documents/sync-metadata.json";
+  private static readonly SYNC_INTERVAL = 1 * 60 * 1000; // 1분
 
   private syncInterval: ReturnType<typeof setInterval> | null = null;
   private isSyncing = false;
+
+  /**
+   * Documents 디렉토리 생성 확인
+   */
+  private async ensureDocumentsDirectory(): Promise<void> {
+    try {
+      const exists = await CloudStorage.exists("Documents");
+      if (!exists) {
+        await CloudStorage.mkdir("Documents");
+        console.log("Documents 디렉토리를 생성했습니다.");
+      }
+    } catch (error) {
+      console.error("Documents 디렉토리 생성 실패:", error);
+    }
+  }
 
   /**
    * iCloud 사용 가능 여부 확인
    */
   async isCloudAvailable(): Promise<boolean> {
     try {
-      // CloudStorage가 사용 가능한지 확인
-      return new Promise((resolve) => {
-        // React Hook을 직접 사용할 수 없으므로 CloudStorage API 사용
-        resolve(true); // 일단 true로 설정, 실제 구현에서는 더 정확한 체크가 필요
-      });
+      // CloudStorage의 isCloudAvailable 메서드를 사용하여 확인
+      const available = await CloudStorage.isCloudAvailable();
+      return available;
     } catch (error) {
       console.error("iCloud 사용 가능 여부 확인 실패:", error);
       return false;
@@ -99,6 +112,9 @@ export class CloudSyncService {
         throw new Error("iCloud를 사용할 수 없습니다");
       }
 
+      // Documents 디렉토리 확인
+      await this.ensureDocumentsDirectory();
+
       const localDbPath = this.getLocalDbPath();
       const localDbExists = await FileSystem.getInfoAsync(localDbPath);
 
@@ -106,15 +122,11 @@ export class CloudSyncService {
         throw new Error("로컬 데이터베이스 파일이 존재하지 않습니다");
       }
 
-      // 데이터베이스 파일을 Base64로 인코딩
-      const dbContent = await FileSystem.readAsStringAsync(localDbPath, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // iCloud에 업로드
-      await CloudStorage.writeFile(
-        `/${CloudSyncService.DB_BACKUP_FILENAME}`,
-        dbContent
+      const uploadPath = localDbPath.replace("file://", "");
+      await CloudStorage.uploadFile(
+        CloudSyncService.DB_BACKUP_FILENAME,
+        uploadPath,
+        { mimeType: "application/x-sqlite3" }
       );
 
       // 메타데이터 저장
@@ -159,14 +171,10 @@ export class CloudSyncService {
         return false;
       }
 
-      // iCloud에서 데이터베이스 내용 읽기
-      const dbContent = await CloudStorage.readFile(
-        `/${CloudSyncService.DB_BACKUP_FILENAME}`
-      );
-
       // 로컬 데이터베이스 백업 생성
       const localDbPath = this.getLocalDbPath();
       const backupLocalPath = `${localDbPath}.backup`;
+      const tempDownloadPath = `${FileSystem.cacheDirectory}temp_download.db`;
 
       const localExists = await FileSystem.getInfoAsync(localDbPath);
       if (localExists.exists) {
@@ -176,9 +184,18 @@ export class CloudSyncService {
         });
       }
 
-      // 새 데이터베이스 파일 저장
-      await FileSystem.writeAsStringAsync(localDbPath, dbContent, {
-        encoding: FileSystem.EncodingType.Base64,
+      // iCloud에서 바이너리 파일 다운로드
+      const downloadPath = tempDownloadPath.replace("file://", "");
+      await CloudStorage.downloadFile(
+        CloudSyncService.DB_BACKUP_FILENAME,
+        downloadPath,
+        CloudStorageScope.AppData
+      );
+
+      // 다운로드한 파일을 실제 데이터베이스 위치로 이동
+      await FileSystem.moveAsync({
+        from: tempDownloadPath,
+        to: localDbPath,
       });
 
       console.log("iCloud에서 데이터베이스를 성공적으로 다운로드했습니다.");
@@ -209,8 +226,10 @@ export class CloudSyncService {
         }
 
         if (status.hasLocalChanges && !status.hasRemoteChanges) {
+          console.log("로컬 변경사항이 있습니다. 업로드합니다.");
           await this.uploadDatabase();
         } else if (status.hasRemoteChanges && !status.hasLocalChanges) {
+          console.log("원격 변경사항이 있습니다. 다운로드합니다.");
           await this.downloadDatabase();
         } else if (status.hasLocalChanges && status.hasRemoteChanges) {
           // 충돌 상황 - 로컬 우선
@@ -267,8 +286,7 @@ export class CloudSyncService {
    */
   private async fileExists(filename: string): Promise<boolean> {
     try {
-      await CloudStorage.readFile(`/${filename}`);
-      return true;
+      return await CloudStorage.exists(filename);
     } catch {
       return false;
     }
@@ -287,7 +305,7 @@ export class CloudSyncService {
   private async saveMetadata(metadata: Record<string, any>): Promise<void> {
     try {
       await CloudStorage.writeFile(
-        `/${CloudSyncService.SYNC_METADATA_KEY}`,
+        CloudSyncService.SYNC_METADATA_KEY,
         JSON.stringify(metadata, null, 2)
       );
     } catch (error) {
@@ -304,7 +322,7 @@ export class CloudSyncService {
 
       if (exists) {
         const content = await CloudStorage.readFile(
-          `/${CloudSyncService.SYNC_METADATA_KEY}`
+          CloudSyncService.SYNC_METADATA_KEY
         );
         return JSON.parse(content);
       }

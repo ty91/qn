@@ -1,6 +1,7 @@
 import { FloatingButton } from "@/components/floating-button";
 import { NoteEditor } from "@/components/note-editor";
 import { NoteItem } from "@/components/note-item";
+import { SyncStatusIndicator } from "@/components/sync-status-indicator";
 import {
   NoteEditorProvider,
   useNoteEditorContext,
@@ -92,6 +93,9 @@ function HomeScreenContent() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <SyncStatusIndicator />
+        </View>
         <FlatList
           data={notes}
           keyExtractor={(item) => item.id}
@@ -122,6 +126,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   listContent: {
     paddingTop: 20,
