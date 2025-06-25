@@ -27,14 +27,14 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>app</string>
-				<string>com.yourcompany.qn</string>
+				<string>qn</string>
+				<string>dev.rovv.qn</string>
 			</array>
 		</dict>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>exp+app</string>
+				<string>exp+qn</string>
 			</array>
 		</dict>
 	</array>
@@ -55,12 +55,12 @@
 	</dict>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.com.yourcompany.qn</key>
+		<key>iCloud.dev.rovv.qn</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
-			<string>app</string>
+			<string>qn</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>Any</string>
 		</dict>
