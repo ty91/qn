@@ -8,9 +8,10 @@ import {
 } from "@/contexts/note-editor-context";
 import { useNoteEditor } from "@/hooks/use-note-editor";
 import { database } from "@/services/database";
+import { databaseEvents, DATABASE_EVENTS } from "@/services/event-emitter";
 import { Note } from "@/types/note";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, View, Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,11 +19,64 @@ function HomeScreenContent() {
   const insets = useSafeAreaInsets();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isVisible, openEditor } = useNoteEditorContext();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { isVisible, openEditor, closeEditor } = useNoteEditorContext();
 
   useEffect(() => {
     loadNotes();
-  }, []);
+
+    // 데이터베이스 업데이트 이벤트 리스너 등록
+    const handleDatabaseUpdate = () => {
+      console.log('데이터베이스가 업데이트되었습니다. 노트 목록을 새로고침합니다.');
+      
+      // 편집 중인 노트가 있다면 경고
+      if (isVisible) {
+        Alert.alert(
+          '동기화 완료',
+          '데이터베이스가 동기화되었습니다. 편집 중인 내용이 손실될 수 있습니다.',
+          [
+            { text: '계속 편집', style: 'cancel' },
+            { 
+              text: '확인', 
+              onPress: () => {
+                closeEditor();
+                loadNotes();
+              }
+            }
+          ]
+        );
+      } else {
+        // 편집 중이 아니면 바로 새로고침
+        loadNotes();
+      }
+    };
+
+    const handleSyncStarted = () => {
+      setIsRefreshing(true);
+    };
+
+    const handleSyncCompleted = () => {
+      setIsRefreshing(false);
+    };
+
+    const handleSyncFailed = () => {
+      setIsRefreshing(false);
+    };
+
+    // 이벤트 리스너 등록
+    databaseEvents.on(DATABASE_EVENTS.UPDATED, handleDatabaseUpdate);
+    databaseEvents.on(DATABASE_EVENTS.SYNC_STARTED, handleSyncStarted);
+    databaseEvents.on(DATABASE_EVENTS.SYNC_COMPLETED, handleSyncCompleted);
+    databaseEvents.on(DATABASE_EVENTS.SYNC_FAILED, handleSyncFailed);
+
+    // 클린업
+    return () => {
+      databaseEvents.off(DATABASE_EVENTS.UPDATED, handleDatabaseUpdate);
+      databaseEvents.off(DATABASE_EVENTS.SYNC_STARTED, handleSyncStarted);
+      databaseEvents.off(DATABASE_EVENTS.SYNC_COMPLETED, handleSyncCompleted);
+      databaseEvents.off(DATABASE_EVENTS.SYNC_FAILED, handleSyncFailed);
+    };
+  }, [isVisible, closeEditor]);
 
   const loadNotes = async () => {
     try {
@@ -108,7 +162,9 @@ function HomeScreenContent() {
           )}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="always"
-          pointerEvents={isVisible ? "none" : "auto"}
+          pointerEvents={isVisible || isRefreshing ? "none" : "auto"}
+          refreshing={isRefreshing}
+          onRefresh={loadNotes}
         />
         <FloatingButton onPress={handleAddNote} />
         <NoteEditor

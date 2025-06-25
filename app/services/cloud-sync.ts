@@ -1,5 +1,7 @@
 import * as FileSystem from "expo-file-system";
 import { CloudStorage, CloudStorageScope } from "react-native-cloud-storage";
+import { database } from "./database";
+import { databaseEvents, DATABASE_EVENTS } from "./event-emitter";
 
 export interface SyncStatus {
   isAvailable: boolean;
@@ -136,9 +138,11 @@ export class CloudSyncService {
       });
 
       console.log("데이터베이스를 iCloud에 성공적으로 업로드했습니다.");
+      databaseEvents.emit(DATABASE_EVENTS.SYNC_COMPLETED, { type: 'upload' });
       return true;
     } catch (error) {
       console.error("데이터베이스 업로드 실패:", error);
+      databaseEvents.emit(DATABASE_EVENTS.SYNC_FAILED, { type: 'upload', error });
       return false;
     } finally {
       this.isSyncing = false;
@@ -198,10 +202,15 @@ export class CloudSyncService {
         to: localDbPath,
       });
 
+      // 데이터베이스 연결 다시 열기
+      await database.reconnect();
+
       console.log("iCloud에서 데이터베이스를 성공적으로 다운로드했습니다.");
+      databaseEvents.emit(DATABASE_EVENTS.SYNC_COMPLETED, { type: 'download' });
       return true;
     } catch (error) {
       console.error("데이터베이스 다운로드 실패:", error);
+      databaseEvents.emit(DATABASE_EVENTS.SYNC_FAILED, { type: 'download', error });
       return false;
     } finally {
       this.isSyncing = false;
@@ -260,6 +269,7 @@ export class CloudSyncService {
    */
   async manualSync(): Promise<boolean> {
     try {
+      databaseEvents.emit(DATABASE_EVENTS.SYNC_STARTED);
       const status = await this.getSyncStatus();
 
       if (!status.isAvailable) {

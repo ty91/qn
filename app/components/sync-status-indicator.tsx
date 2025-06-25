@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useCloudSync } from "@/hooks/use-cloud-sync";
+import { databaseEvents, DATABASE_EVENTS } from "@/services/event-emitter";
 
 export function SyncStatusIndicator() {
   const {
@@ -17,6 +18,27 @@ export function SyncStatusIndicator() {
     syncError,
     performSync,
   } = useCloudSync();
+
+  useEffect(() => {
+    const handleSyncCompleted = (data: { type: string }) => {
+      // 동기화 완료 시 사용자에게 알림
+      // React Native에서는 토스트 메시지를 직접 구현해야 합니다
+      // 여기서는 console.log로 대체합니다
+      console.log(`✅ 동기화 완료: ${data.type === 'upload' ? '업로드' : '다운로드'}`);
+    };
+
+    const handleSyncFailed = (data: { type: string; error: any }) => {
+      console.log(`❌ 동기화 실패: ${data.type === 'upload' ? '업로드' : '다운로드'}`);
+    };
+
+    databaseEvents.on(DATABASE_EVENTS.SYNC_COMPLETED, handleSyncCompleted);
+    databaseEvents.on(DATABASE_EVENTS.SYNC_FAILED, handleSyncFailed);
+
+    return () => {
+      databaseEvents.off(DATABASE_EVENTS.SYNC_COMPLETED, handleSyncCompleted);
+      databaseEvents.off(DATABASE_EVENTS.SYNC_FAILED, handleSyncFailed);
+    };
+  }, []);
 
   if (!cloudAvailable) {
     return null;
