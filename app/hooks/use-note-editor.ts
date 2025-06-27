@@ -1,5 +1,4 @@
 import { useNoteEditorContext } from "@/contexts/note-editor-context";
-import { database } from "@/services/database";
 import { Note } from "@/types/note";
 import { useCallback, useRef } from "react";
 
@@ -20,15 +19,14 @@ export function useNoteEditor({
 
   const handleSave = useCallback(
     async (text: string) => {
-      try {
-        if (editingNote) {
-          // Update the note and close editor
-          const updatedNote = await database.updateNote(editingNote.id, text);
-          onUpdateNote(updatedNote);
-          closeEditor();
-        }
-      } catch (error) {
-        console.error("Failed to save note:", error);
+      if (editingNote) {
+        const updatedNote: Note = {
+          ...editingNote,
+          text,
+          updatedAt: new Date(),
+        };
+        onUpdateNote(updatedNote);
+        closeEditor();
       }
     },
     [editingNote, onUpdateNote, closeEditor]
@@ -36,48 +34,40 @@ export function useNoteEditor({
 
   const handleAutoSave = useCallback(
     (text: string) => {
-      // Always update pending text
       pendingTextRef.current = text;
 
       if (editingNote && text) {
-        // Clear any pending save
         if (saveTimeoutRef.current) {
           clearTimeout(saveTimeoutRef.current);
         }
 
-        // Schedule new save (only update, don't close editor)
-        saveTimeoutRef.current = setTimeout(async () => {
-          try {
-            const updatedNote = await database.updateNote(editingNote.id, text);
-            onUpdateNote(updatedNote);
-            pendingTextRef.current = "";
-          } catch (error) {
-            console.error("Failed to auto-save:", error);
-          }
+        saveTimeoutRef.current = setTimeout(() => {
+          const updatedNote: Note = {
+            ...editingNote,
+            text,
+            updatedAt: new Date(),
+          };
+          onUpdateNote(updatedNote);
+          pendingTextRef.current = "";
         }, 500);
       }
     },
     [editingNote, onUpdateNote]
   );
 
-  const handleClose = useCallback(async () => {
-    // Clear any pending saves
+  const handleClose = useCallback(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     if (editingNote) {
-      try {
-        // Save pending text
-        if (pendingTextRef.current) {
-          const updatedNote = await database.updateNote(
-            editingNote.id,
-            pendingTextRef.current
-          );
-          onUpdateNote(updatedNote);
-        }
-      } catch (error) {
-        console.error("Failed to handle close:", error);
+      if (pendingTextRef.current) {
+        const updatedNote: Note = {
+          ...editingNote,
+          text: pendingTextRef.current,
+          updatedAt: new Date(),
+        };
+        onUpdateNote(updatedNote);
       }
     }
 

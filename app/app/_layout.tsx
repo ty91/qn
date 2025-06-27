@@ -1,47 +1,70 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { useFonts } from "expo-font";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import "react-native-reanimated";
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { cloudSync } from '@/services/cloud-sync';
-import { useIsCloudAvailable } from 'react-native-cloud-storage';
+import { AuthProvider, useAuth } from "@/contexts/auth-context";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { ActivityIndicator, View } from "react-native";
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const cloudAvailable = useIsCloudAvailable();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
 
-  // iCloud 동기화 초기화
   useEffect(() => {
-    if (cloudAvailable) {
-      // 자동 동기화 시작
-      cloudSync.startAutoSync();
-      console.log('iCloud 자동 동기화가 시작되었습니다.');
+    if (isLoading) return;
 
-      // 앱 종료 시 자동 동기화 중지
-      return () => {
-        cloudSync.stopAutoSync();
-      };
+    const inAuthGroup = segments[0] === "login";
+
+    if (!isAuthenticated && !inAuthGroup) {
+      // Redirect to login
+      router.replace("/login");
+    } else if (isAuthenticated && inAuthGroup) {
+      // Redirect to home
+      router.replace("/");
     }
-  }, [cloudAvailable]);
+  }, [isAuthenticated, segments, isLoading, router]);
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  });
+
+  if (!loaded) {
+    return null;
+  }
+
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }
