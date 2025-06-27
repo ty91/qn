@@ -58,7 +58,8 @@ pnpm run reset-project  # Reset to fresh state
 ### Storage Structure
 - **Repository**: `qn-vault` (auto-created private repo)
 - **Directory**: `/notes/` (flat structure)
-- **File naming**: `{timestamp}-{uuid}.md` (e.g., `20240115103045-a1b2c3d4.md`)
+- **File naming**: `{id}.md` where id is timestamp-uuid (e.g., `20240115103045-a1b2c3d4.md`)
+- **Note ID format**: `YYYYMMDDHHmmss-{8char-uuid}` (UTC timestamp)
 - **File format**: Markdown with YAML frontmatter
   ```markdown
   ---
@@ -81,21 +82,20 @@ pnpm run reset-project  # Reset to fresh state
 ```sql
 -- Main notes table
 CREATE TABLE notes (
-  filename TEXT PRIMARY KEY,
-  id TEXT UNIQUE,
-  first_line TEXT,
-  content TEXT,      -- Content without frontmatter
+  id TEXT PRIMARY KEY,    -- Same as GitHub filename without .md
+  first_line TEXT,        -- First line preview for list view
+  content TEXT,           -- Content without frontmatter
   created_at TEXT,
   updated_at TEXT,
-  sha TEXT,          -- GitHub file SHA for change detection
+  sha TEXT,               -- GitHub file SHA for change detection
   is_dirty INTEGER DEFAULT 0
 );
 
 -- Sync queue for offline operations
 CREATE TABLE sync_queue (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  operation TEXT,    -- 'create', 'update', 'delete'
-  filename TEXT,
+  operation TEXT,         -- 'create', 'update', 'delete'
+  note_id TEXT,          -- References notes.id
   content TEXT,
   created_at TEXT,
   retry_count INTEGER DEFAULT 0
@@ -104,8 +104,10 @@ CREATE TABLE sync_queue (
 
 ## Key Features Implementation
 
-- **Note CRUD**: Local SQLite + GitHub API synchronization
-- **Auto-save**: Debounced local save with background sync
+- **Note CRUD**: Local SQLite with immediate UI updates
+- **Auto-save**: Debounced save (500ms) during typing
+- **Empty notes**: Supported - empty notes can be created and saved
+- **First line preview**: Note list shows first line (max 100 chars)
 - **Offline mode**: Full functionality with queued sync
 - **Gestures**: Swipe to delete using react-native-gesture-handler
 - **Theme**: Light/dark mode support via `useColorScheme` hook
@@ -122,29 +124,39 @@ CREATE TABLE sync_queue (
 
 1. Always use TypeScript with proper types
 2. Follow existing component patterns in `components/` directory
-3. Database schema changes require migration handling
+3. Database schema changes require migration handling (currently drops and recreates tables)
 4. Test on both iOS and Android when making UI changes
 5. Use Expo SDK features when available instead of bare React Native packages
 6. GitHub API rate limits: Stay under 4800 requests/hour
 7. Handle offline scenarios gracefully with sync queue
 8. UI Language: Korean (e.g., "무슨 생각을 하고 계신가요?")
+9. Note IDs use UTC timestamps for consistency
+10. Empty notes are valid and should be preserved
 
 ## Implementation Status
 
 ### Completed
-- ✅ GitHub OAuth authentication
-- ✅ Basic note editor UI
-- ✅ Note list with swipe gestures
-- ✅ Auto-save functionality
-- ✅ Theme support
+- ✅ GitHub OAuth authentication (repo scope)
+- ✅ Note editor UI with Korean placeholder
+- ✅ Note list with swipe-to-delete gestures
+- ✅ Auto-save functionality with debouncing
+- ✅ Theme support (light/dark)
+- ✅ SQLite local storage with proper schema
+- ✅ Note ID generation (timestamp-uuid format)
+- ✅ First line preview in list view
+- ✅ Empty note support
+- ✅ Data persistence across app restarts
 
 ### In Progress
-- 🚧 GitHub backend integration
-- 🚧 SQLite local storage
-- 🚧 Sync manager
+- 🚧 GitHub API service layer
+- 🚧 Repository creation/verification
+- 🚧 Note upload to GitHub
+- 🚧 Sync manager implementation
 - 🚧 Offline queue system
 
 ### Planned
 - ⏳ Sync status indicator (cloud icon)
-- ⏳ Initial sync optimization
-- ⏳ Conflict resolution UI
+- ⏳ Initial sync from GitHub
+- ⏳ Periodic background sync
+- ⏳ Conflict resolution
+- ⏳ Rate limit handling

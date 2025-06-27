@@ -11,7 +11,7 @@ import Animated, {
 
 interface NoteItemProps {
   note: Note;
-  onDelete?: (id: string) => void;
+  onDelete?: () => void;
   onTap?: (note: Note) => void;
 }
 
@@ -24,7 +24,7 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
 
   const handleDelete = () => {
     if (onDelete) {
-      onDelete(note.id);
+      onDelete();
     }
   };
 
@@ -102,7 +102,7 @@ export function NoteItem({ note, onDelete, onTap }: NoteItemProps) {
       <GestureDetector gesture={gesture}>
         <Animated.View style={[styles.container, animatedStyle]}>
           <Text style={styles.text} numberOfLines={1} ellipsizeMode="tail">
-            {note.text ? note.text.replace(/\n/g, " ") : "빈 노트"}
+            {note.text ? note.text.split('\n')[0] || "빈 노트" : "빈 노트"}
           </Text>
           <Text style={styles.timestamp}>
             {note.createdAt.toLocaleDateString("ko-KR", {

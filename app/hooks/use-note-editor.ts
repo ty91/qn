@@ -1,5 +1,6 @@
 import { useNoteEditorContext } from "@/contexts/note-editor-context";
 import { Note } from "@/types/note";
+import { toDate } from "@/utils/note-utils";
 import { useCallback, useRef } from "react";
 
 interface UseNoteEditorProps {
@@ -15,44 +16,58 @@ export function useNoteEditor({
 }: UseNoteEditorProps) {
   const { editingNote, closeEditor } = useNoteEditorContext();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingTextRef = useRef<string>("");
+  const pendingTextRef = useRef<string | null>(null);
 
   const handleSave = useCallback(
     async (text: string) => {
       if (editingNote) {
+        const isNewNote = !editingNote.text && editingNote.id;
         const updatedNote: Note = {
           ...editingNote,
           text,
+          createdAt: toDate(editingNote.createdAt),
           updatedAt: new Date(),
         };
-        onUpdateNote(updatedNote);
+        
+        if (isNewNote) {
+          onCreateNote(updatedNote);
+        } else {
+          onUpdateNote(updatedNote);
+        }
         closeEditor();
       }
     },
-    [editingNote, onUpdateNote, closeEditor]
+    [editingNote, onCreateNote, onUpdateNote, closeEditor]
   );
 
   const handleAutoSave = useCallback(
     (text: string) => {
       pendingTextRef.current = text;
 
-      if (editingNote && text) {
+      if (editingNote) {
         if (saveTimeoutRef.current) {
           clearTimeout(saveTimeoutRef.current);
         }
 
         saveTimeoutRef.current = setTimeout(() => {
+          const isNewNote = !editingNote.text && editingNote.id;
           const updatedNote: Note = {
             ...editingNote,
             text,
+            createdAt: toDate(editingNote.createdAt),
             updatedAt: new Date(),
           };
-          onUpdateNote(updatedNote);
-          pendingTextRef.current = "";
+          
+          if (isNewNote) {
+            onCreateNote(updatedNote);
+          } else {
+            onUpdateNote(updatedNote);
+          }
+          pendingTextRef.current = null;
         }, 500);
       }
     },
-    [editingNote, onUpdateNote]
+    [editingNote, onCreateNote, onUpdateNote]
   );
 
   const handleClose = useCallback(() => {
@@ -60,18 +75,17 @@ export function useNoteEditor({
       clearTimeout(saveTimeoutRef.current);
     }
 
-    if (editingNote) {
-      if (pendingTextRef.current) {
-        const updatedNote: Note = {
-          ...editingNote,
-          text: pendingTextRef.current,
-          updatedAt: new Date(),
-        };
-        onUpdateNote(updatedNote);
-      }
+    if (editingNote && pendingTextRef.current !== null) {
+      const updatedNote: Note = {
+        ...editingNote,
+        text: pendingTextRef.current,
+        createdAt: toDate(editingNote.createdAt),
+        updatedAt: new Date(),
+      };
+      onUpdateNote(updatedNote);
     }
 
-    pendingTextRef.current = "";
+    pendingTextRef.current = null;
     closeEditor();
   }, [editingNote, onUpdateNote, closeEditor]);
 

@@ -6,12 +6,13 @@ import {
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "react-native-reanimated";
 
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { ActivityIndicator, View } from "react-native";
+import { initializeDatabase } from "@/services/database";
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
@@ -57,8 +58,19 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
+  const [dbInitialized, setDbInitialized] = useState(false);
 
-  if (!loaded) {
+  useEffect(() => {
+    initializeDatabase()
+      .then(() => setDbInitialized(true))
+      .catch((error) => {
+        console.error("Failed to initialize database:", error);
+        // Continue anyway, will handle errors in components
+        setDbInitialized(true);
+      });
+  }, []);
+
+  if (!loaded || !dbInitialized) {
     return null;
   }
 

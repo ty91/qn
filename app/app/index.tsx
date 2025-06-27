@@ -7,27 +7,97 @@ import {
 } from "@/contexts/note-editor-context";
 import { useNoteEditor } from "@/hooks/use-note-editor";
 import { Note } from "@/types/note";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { 
+  getAllNotes, 
+  saveNote as saveNoteToDb, 
+  deleteNote as deleteNoteFromDb
+} from "@/services/database";
+import { 
+  noteToDbNote, 
+  dbNoteToNote, 
+  generateNoteId,
+  toDate
+} from "@/utils/note-utils";
 
 function HomeScreenContent() {
   const insets = useSafeAreaInsets();
   const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { isVisible, openEditor } = useNoteEditorContext();
 
-  const handleCreateNote = useCallback((note: Note) => {
-    setNotes((prev) => [note, ...prev]);
+  // Load notes from database on mount
+  useEffect(() => {
+    loadNotes();
   }, []);
 
-  const handleUpdateNote = useCallback((note: Note) => {
-    setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+  const loadNotes = async () => {
+    try {
+      setLoading(true);
+      const dbNotes = await getAllNotes();
+      const convertedNotes = dbNotes.map(dbNoteToNote);
+      setNotes(convertedNotes);
+    } catch (error) {
+      console.error("Failed to load notes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateNote = useCallback(async (note: Note) => {
+    try {
+      // Ensure dates are Date objects
+      note.createdAt = toDate(note.createdAt);
+      note.updatedAt = toDate(note.updatedAt);
+      
+      // Save to database
+      const dbNote = noteToDbNote(note);
+      dbNote.is_dirty = 1; // Mark as dirty for sync
+      await saveNoteToDb(dbNote);
+      
+      // Update local state - ensure no duplicates
+      setNotes((prev) => {
+        const exists = prev.some(n => n.id === note.id);
+        if (exists) {
+          return prev.map(n => n.id === note.id ? note : n);
+        }
+        return [note, ...prev];
+      });
+    } catch (error) {
+      console.error("Failed to create note:", error);
+    }
+  }, []);
+
+  const handleUpdateNote = useCallback(async (note: Note) => {
+    try {
+      // Ensure dates are Date objects
+      note.createdAt = toDate(note.createdAt);
+      note.updatedAt = toDate(note.updatedAt);
+      
+      // Save to database
+      const dbNote = noteToDbNote(note);
+      dbNote.is_dirty = 1; // Mark as dirty for sync
+      await saveNoteToDb(dbNote);
+      
+      // Update local state
+      setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+    } catch (error) {
+      console.error("Failed to update note:", error);
+    }
   }, []);
 
   const handleDeleteNote = async (id: string) => {
-    setNotes(notes.filter((note) => note.id !== id));
+    try {
+      await deleteNoteFromDb(id);
+      
+      // Update local state
+      setNotes(notes.filter((note) => note.id !== id));
+    } catch (error) {
+      console.error("Failed to delete note:", error);
+    }
   };
 
   const { handleSave, handleAutoSave, initialText } = useNoteEditor({
@@ -38,12 +108,13 @@ function HomeScreenContent() {
 
   const handleAddNote = async () => {
     const newNote: Note = {
-      id: Date.now().toString(),
+      id: generateNoteId(),
       text: "",
       createdAt: new Date(),
       updatedAt: new Date(),
+      isDirty: true
     };
-    setNotes((prev) => [newNote, ...prev]);
+    // Don't add to list yet, wait for actual save
     openEditor(newNote);
   };
 
@@ -74,7 +145,7 @@ function HomeScreenContent() {
           renderItem={({ item }) => (
             <NoteItem
               note={item}
-              onDelete={handleDeleteNote}
+              onDelete={() => handleDeleteNote(item.id)}
               onTap={handleTapNote}
             />
           )}
