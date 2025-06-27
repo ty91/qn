@@ -11,30 +11,30 @@ import "react-native-reanimated";
 
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { ActivityIndicator, View } from "react-native";
 import { initializeDatabase } from "@/services/database";
+import { ActivityIndicator, View } from "react-native";
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { authState } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (authState === "LOADING") return;
 
-    const inAuthGroup = segments[0] === "login";
+    const inAuthGroup = segments[0] === "(auth)";
 
-    if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login
-      router.replace("/login");
-    } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to home
+    if (authState === "UNAUTHENTICATED" && !inAuthGroup) {
+      router.replace("/(auth)/login");
+    } else if (authState === "AUTHENTICATED" && inAuthGroup) {
       router.replace("/");
+    } else if (authState === "REPO_CONFLICT") {
+      router.replace("/repo-conflict");
     }
-  }, [isAuthenticated, segments, isLoading, router]);
+  }, [authState, segments, router]);
 
-  if (isLoading) {
+  if (authState === "LOADING") {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
@@ -46,7 +46,8 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+        <Stack.Screen name="repo-conflict" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

@@ -1,5 +1,10 @@
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  checkRepoStatus,
+  createRepo,
+  getLoginUser,
+} from "../services/github";
 
 interface User {
   login: string;
@@ -7,13 +12,15 @@ interface User {
   avatarUrl: string | null;
 }
 
+type AuthState = 'LOADING' | 'AUTHENTICATED' | 'UNAUTHENTICATED' | 'REPO_CONFLICT';
+
 interface AuthContextType {
-  isAuthenticated: boolean;
-  isLoading: boolean;
+  authState: AuthState;
   user: User | null;
   token: string | null;
-  signIn: (token: string, user: User) => Promise<void>;
+  signIn: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
+  resolveConflictAndSignOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -22,8 +29,7 @@ const TOKEN_KEY = "github_token";
 const USER_KEY = "github_user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [authState, setAuthState] = useState<AuthState>('LOADING');
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
@@ -37,27 +43,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedUser = await SecureStore.getItemAsync(USER_KEY);
 
       if (storedToken && storedUser) {
+        await getLoginUser(storedToken);
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-        setIsAuthenticated(true);
+        setAuthState('AUTHENTICATED');
+      } else {
+        setAuthState('UNAUTHENTICATED');
       }
     } catch (error) {
       console.error("Error checking auth status:", error);
-    } finally {
-      setIsLoading(false);
-    }
+      setAuthState('UNAUTHENTICATED');
+    } 
   };
 
-  const signIn = async (newToken: string, newUser: User) => {
+  const signIn = async (newToken: string) => {
     try {
+      const newUser = await getLoginUser(newToken);
+      const repoStatus = await checkRepoStatus(newToken);
+
+      if (repoStatus === 'CONFLICT') {
+        setAuthState('REPO_CONFLICT');
+        return;
+      }
+
+      if (repoStatus === 'NOT_FOUND') {
+        await createRepo(newToken);
+      }
+
       await SecureStore.setItemAsync(TOKEN_KEY, newToken);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(newUser));
 
       setToken(newToken);
       setUser(newUser);
-      setIsAuthenticated(true);
+      setAuthState('AUTHENTICATED');
     } catch (error) {
-      console.error("Error storing auth data:", error);
+      console.error("Error during sign in:", error);
+      setAuthState('UNAUTHENTICATED');
       throw error;
     }
   };
@@ -69,21 +90,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setToken(null);
       setUser(null);
-      setIsAuthenticated(false);
+      setAuthState('UNAUTHENTICATED');
     } catch (error) {
       console.error("Error clearing auth data:", error);
     }
   };
 
+  const resolveConflictAndSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated,
-        isLoading,
+        authState,
         user,
         token,
         signIn,
         signOut,
+        resolveConflictAndSignOut,
       }}
     >
       {children}

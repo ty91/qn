@@ -1,35 +1,50 @@
 import { FloatingButton } from "@/components/floating-button";
 import { NoteEditor } from "@/components/note-editor";
 import { NoteItem } from "@/components/note-item";
+import { useAuth } from "@/contexts/auth-context";
 import {
   NoteEditorProvider,
   useNoteEditorContext,
 } from "@/contexts/note-editor-context";
 import { useNoteEditor } from "@/hooks/use-note-editor";
-import { Note } from "@/types/note";
-import React, { useCallback, useState, useEffect } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { 
-  getAllNotes, 
-  saveNote as saveNoteToDb, 
-  deleteNote as deleteNoteFromDb
+import {
+  deleteNote as deleteNoteFromDb,
+  getAllNotes,
+  saveNote as saveNoteToDb,
 } from "@/services/database";
-import { 
-  noteToDbNote, 
-  dbNoteToNote, 
+import { Note } from "@/types/note";
+import {
+  dbNoteToNote,
   generateNoteId,
-  toDate
+  noteToDbNote,
+  toDate,
 } from "@/utils/note-utils";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuProvider,
+  MenuTrigger,
+} from "react-native-popup-menu";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function HomeScreenContent() {
   const insets = useSafeAreaInsets();
+  const { signOut } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const { isVisible, openEditor } = useNoteEditorContext();
 
-  // Load notes from database on mount
   useEffect(() => {
     loadNotes();
   }, []);
@@ -49,20 +64,17 @@ function HomeScreenContent() {
 
   const handleCreateNote = useCallback(async (note: Note) => {
     try {
-      // Ensure dates are Date objects
       note.createdAt = toDate(note.createdAt);
       note.updatedAt = toDate(note.updatedAt);
-      
-      // Save to database
+
       const dbNote = noteToDbNote(note);
-      dbNote.is_dirty = 1; // Mark as dirty for sync
+      dbNote.is_dirty = 1;
       await saveNoteToDb(dbNote);
-      
-      // Update local state - ensure no duplicates
+
       setNotes((prev) => {
-        const exists = prev.some(n => n.id === note.id);
+        const exists = prev.some((n) => n.id === note.id);
         if (exists) {
-          return prev.map(n => n.id === note.id ? note : n);
+          return prev.map((n) => (n.id === note.id ? note : n));
         }
         return [note, ...prev];
       });
@@ -73,16 +85,13 @@ function HomeScreenContent() {
 
   const handleUpdateNote = useCallback(async (note: Note) => {
     try {
-      // Ensure dates are Date objects
       note.createdAt = toDate(note.createdAt);
       note.updatedAt = toDate(note.updatedAt);
-      
-      // Save to database
+
       const dbNote = noteToDbNote(note);
-      dbNote.is_dirty = 1; // Mark as dirty for sync
+      dbNote.is_dirty = 1;
       await saveNoteToDb(dbNote);
-      
-      // Update local state
+
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
     } catch (error) {
       console.error("Failed to update note:", error);
@@ -92,8 +101,6 @@ function HomeScreenContent() {
   const handleDeleteNote = async (id: string) => {
     try {
       await deleteNoteFromDb(id);
-      
-      // Update local state
       setNotes(notes.filter((note) => note.id !== id));
     } catch (error) {
       console.error("Failed to delete note:", error);
@@ -112,9 +119,8 @@ function HomeScreenContent() {
       text: "",
       createdAt: new Date(),
       updatedAt: new Date(),
-      isDirty: true
+      isDirty: true,
     };
-    // Don't add to list yet, wait for actual save
     openEditor(newNote);
   };
 
@@ -137,31 +143,41 @@ function HomeScreenContent() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <FlatList
-          data={notes}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <NoteItem
-              note={item}
-              onDelete={() => handleDeleteNote(item.id)}
-              onTap={handleTapNote}
-            />
-          )}
-          contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="always"
-          pointerEvents={isVisible ? "none" : "auto"}
-        />
-        <FloatingButton onPress={handleAddNote} />
-        <NoteEditor
-          visible={isVisible}
-          onSave={handleSave}
-          onAutoSave={handleAutoSave}
-          initialText={initialText}
-        />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Menu>
+          <MenuTrigger>
+            <Ionicons name="ellipsis-vertical" size={24} color="#000" />
+          </MenuTrigger>
+          <MenuOptions>
+            <MenuOption onSelect={signOut}>
+              <Text style={styles.menuOptionText}>로그아웃</Text>
+            </MenuOption>
+          </MenuOptions>
+        </Menu>
       </View>
-    </GestureHandlerRootView>
+      <FlatList
+        data={notes}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <NoteItem
+            note={item}
+            onDelete={() => handleDeleteNote(item.id)}
+            onTap={handleTapNote}
+          />
+        )}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="always"
+        pointerEvents={isVisible ? "none" : "auto"}
+      />
+      <FloatingButton onPress={handleAddNote} />
+      <NoteEditor
+        visible={isVisible}
+        onSave={handleSave}
+        onAutoSave={handleAutoSave}
+        initialText={initialText}
+      />
+    </View>
   );
 }
 
@@ -170,8 +186,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  menuOptionText: {
+    fontSize: 16,
+    padding: 10,
+  },
   listContent: {
-    paddingTop: 20,
+    paddingTop: 10,
   },
   centerContent: {
     justifyContent: "center",
@@ -181,8 +210,12 @@ const styles = StyleSheet.create({
 
 export default function HomeScreen() {
   return (
-    <NoteEditorProvider>
-      <HomeScreenContent />
-    </NoteEditorProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <MenuProvider>
+        <NoteEditorProvider>
+          <HomeScreenContent />
+        </NoteEditorProvider>
+      </MenuProvider>
+    </GestureHandlerRootView>
   );
 }

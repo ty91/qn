@@ -1,9 +1,5 @@
 import { useAuth } from "@/contexts/auth-context";
-import {
-  exchangeCodeForToken,
-  fetchGitHubUser,
-  useGitHubAuth,
-} from "@/services/github-oauth";
+import { exchangeCodeForToken, useGitHubAuth } from "@/services/github-oauth";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -36,9 +32,7 @@ export default function LoginScreen() {
 
         const token = await exchangeCodeForToken(code);
 
-        const user = await fetchGitHubUser(token);
-
-        await signIn(token, user);
+        await signIn(token);
 
         router.replace("/");
       } catch (error) {
@@ -96,8 +90,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <Text style={styles.description}>
-            GitHub 계정으로 로그인하여{"\n"}
-            모든 기기에서 노트를 동기화하세요
+            GitHub 계정으로 로그인하여 {"\n"} 모든 기기에서 노트를 동기화하세요
           </Text>
 
           {__DEV__ && (

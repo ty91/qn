@@ -43,7 +43,7 @@ export const useGitHubAuth = () => {
 export const exchangeCodeForToken = async (code: string) => {
   try {
     const response = await fetch(
-      "https://qn-api.ty91kr.workers.dev/auth/github/token",
+      "https://qn-api.rovv.workers.dev/auth/github/token",
       {
         method: "POST",
         headers: {
