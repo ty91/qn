@@ -1,22 +1,7 @@
-import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
-import dotenv from "dotenv";
+import type { Bindings, TokenResponse } from "./types";
 
-// .env 파일 로드
-dotenv.config();
-
-const app = new Hono();
-
-// CORS 설정 (모바일 앱에서 접근할 수 있도록)
-app.use(
-  "/*",
-  cors({
-    origin: "*", // 실제 운영에서는 특정 도메인으로 제한하세요
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const app = new Hono<{ Bindings: Bindings }>();
 
 app.get("/", (c) => {
   return c.text("Hello Hono!");
@@ -26,8 +11,8 @@ app.get("/", (c) => {
 app.post("/auth/github/token", async (c) => {
   try {
     const { code } = await c.req.json();
-    const client_id = process.env.GITHUB_CLIENT_ID!;
-    const client_secret = process.env.GITHUB_CLIENT_SECRET!;
+    const client_id = c.env.GITHUB_CLIENT_ID;
+    const client_secret = c.env.GITHUB_CLIENT_SECRET;
 
     if (!client_id || !client_secret) {
       console.error("GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is not set");
@@ -67,7 +52,7 @@ app.post("/auth/github/token", async (c) => {
       }
     );
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = (await tokenResponse.json()) as TokenResponse;
 
     // GitHub API 오류 처리
     if (tokenData.error) {
@@ -112,27 +97,4 @@ app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-const server = serve(
-  {
-    fetch: app.fetch,
-    port: 3000,
-  },
-  (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`);
-  }
-);
-
-// graceful shutdown
-process.on("SIGINT", () => {
-  server.close();
-  process.exit(0);
-});
-process.on("SIGTERM", () => {
-  server.close((err) => {
-    if (err) {
-      console.error(err);
-      process.exit(1);
-    }
-    process.exit(0);
-  });
-});
+export default app;
