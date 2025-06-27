@@ -12,7 +12,8 @@ import "react-native-reanimated";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { initializeDatabase } from "@/services/database";
-import { ActivityIndicator, View } from "react-native";
+import { synchronize } from "@/services/sync";
+import { ActivityIndicator, AppState, View } from "react-native";
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
@@ -27,12 +28,32 @@ function RootLayoutNav() {
 
     if (authState === "UNAUTHENTICATED" && !inAuthGroup) {
       router.replace("/(auth)/login");
-    } else if (authState === "AUTHENTICATED" && inAuthGroup) {
-      router.replace("/");
+    } else if (authState === "AUTHENTICATED") {
+      if (inAuthGroup) {
+        router.replace("/");
+      }
+      // Run initial sync when authenticated
+      synchronize();
     } else if (authState === "REPO_CONFLICT") {
       router.replace("/repo-conflict");
     }
   }, [authState, segments, router]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        if (nextAppState === "active" && authState === "AUTHENTICATED") {
+          console.log("App has come to the foreground, running sync.");
+          await synchronize();
+        }
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [authState]);
 
   if (authState === "LOADING") {
     return (

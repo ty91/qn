@@ -1,6 +1,6 @@
-# CLAUDE.md
+# GEMINI.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Gemini when working with code in this repository.
 
 ## Project Overview
 
@@ -137,8 +137,11 @@ CREATE TABLE sync_queue (
 
 ### Completed
 - ✅ GitHub OAuth authentication (repo scope)
+- ✅ GitHub API service layer
+- ✅ Repository creation/verification with conflict handling
 - ✅ Note editor UI with Korean placeholder
 - ✅ Note list with swipe-to-delete gestures
+- ✅ Logout functionality from main screen
 - ✅ Auto-save functionality with debouncing
 - ✅ Theme support (light/dark)
 - ✅ SQLite local storage with proper schema
@@ -148,15 +151,12 @@ CREATE TABLE sync_queue (
 - ✅ Data persistence across app restarts
 
 ### In Progress
-- 🚧 GitHub API service layer
-- 🚧 Repository creation/verification
-- 🚧 Note upload to GitHub
-- 🚧 Sync manager implementation
+- 🚧 Sync manager implementation (including note up/download)
 - 🚧 Offline queue system
 
 ### Planned
 - ⏳ Sync status indicator (cloud icon)
 - ⏳ Initial sync from GitHub
 - ⏳ Periodic background sync
-- ⏳ Conflict resolution
+- ⏳ Note-level conflict resolution
 - ⏳ Rate limit handling

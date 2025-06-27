@@ -114,7 +114,22 @@ export async function getNoteById(id: string): Promise<DbNote | null> {
 // Delete a note
 export async function deleteNote(id: string): Promise<void> {
   const db = getDatabase();
+  const note = await getNoteById(id);
 
+  // If the note exists and has a sha, it means it's on GitHub.
+  // We need to add it to the sync queue to be deleted from the remote.
+  if (note && note.sha) {
+    await addToSyncQueue({
+      operation: 'delete',
+      note_id: id,
+      // We store the sha in the content field for the delete operation.
+      content: note.sha, 
+      created_at: new Date().toISOString(),
+      retry_count: 0,
+    });
+  }
+
+  // Finally, delete the note from the local database.
   await db.runAsync(`DELETE FROM notes WHERE id = ?`, [id]);
 }
 

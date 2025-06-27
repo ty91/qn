@@ -1,6 +1,6 @@
-# CLAUDE.md
+# GEMINI.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Gemini when working with code in this repository.
 
 ## Project Overview
 
@@ -41,9 +41,10 @@ pnpm run reset-project  # Reset to fresh state
 - `components/` - Reusable UI components
 - `contexts/` - React contexts (e.g., note-editor-context)
 - `hooks/` - Custom React hooks
-- `services/` - Business logic (database.ts for SQLite operations)
+- `services/` - Business logic (database.ts for SQLite operations, sync.ts for synchronization)
 - `types/` - TypeScript type definitions
 - `assets/` - Images and fonts
+- `constants/` - Shared constants (e.g., github.ts for GitHub-related constants)
 
 ## Architecture Patterns
 
@@ -72,11 +73,17 @@ pnpm run reset-project  # Reset to fresh state
   ```
 
 ### Synchronization Strategy
-- **Change detection**: Git Commits API (`GET /repos/{owner}/{repo}/commits`)
-- **Conflict resolution**: Local changes always take priority
-- **Offline support**: Changes queued in SQLite, synced when online
-- **Retry logic**: 3 attempts with exponential backoff
-- **Rate limiting**: Max 4800 requests/hour (safety buffer)
+- **Sync implementation**: `services/sync.ts` provides full synchronization cycle
+- **Sync operations**:
+  1. Process local deletions from sync queue
+  2. Upload dirty (locally modified) notes
+  3. Download and merge remote notes
+  4. Delete local notes removed from remote
+- **Change detection**: Compare SHA between local and remote
+- **Conflict resolution**: Local changes always take priority (dirty notes skip download)
+- **Offline support**: Changes queued in SQLite sync_queue table
+- **Authentication**: Uses stored GitHub token from SecureStore
+- **Constants**: GitHub-related constants centralized in `constants/github.ts`
 
 ### Local Database Schema
 ```sql
@@ -137,8 +144,11 @@ CREATE TABLE sync_queue (
 
 ### Completed
 - ✅ GitHub OAuth authentication (repo scope)
+- ✅ GitHub API service layer
+- ✅ Repository creation/verification with conflict handling
 - ✅ Note editor UI with Korean placeholder
 - ✅ Note list with swipe-to-delete gestures
+- ✅ Logout functionality from main screen
 - ✅ Auto-save functionality with debouncing
 - ✅ Theme support (light/dark)
 - ✅ SQLite local storage with proper schema
@@ -146,17 +156,21 @@ CREATE TABLE sync_queue (
 - ✅ First line preview in list view
 - ✅ Empty note support
 - ✅ Data persistence across app restarts
+- ✅ Sync manager implementation with full sync cycle
+- ✅ Offline queue system (sync_queue table)
+- ✅ Delete operations queued when offline
+- ✅ SHA-based change detection
+- ✅ Constants management in `constants/github.ts`
 
 ### In Progress
-- 🚧 GitHub API service layer
-- 🚧 Repository creation/verification
-- 🚧 Note upload to GitHub
-- 🚧 Sync manager implementation
-- 🚧 Offline queue system
+- 🚧 Sync status UI indicator
+- 🚧 Error handling improvements in sync.ts
+- 🚧 Concurrent sync prevention
 
 ### Planned
-- ⏳ Sync status indicator (cloud icon)
-- ⏳ Initial sync from GitHub
+- ⏳ Initial sync from GitHub on first login
 - ⏳ Periodic background sync
-- ⏳ Conflict resolution
+- ⏳ Retry logic with exponential backoff
 - ⏳ Rate limit handling
+- ⏳ Performance optimization (parallel operations)
+- ⏳ Sync progress tracking

@@ -83,11 +83,12 @@ export async function createRepo(token: string): Promise<void> {
 
 export async function getNote(
   token: string,
+  repo: string,
   noteId: string
 ): Promise<{ content: string; sha: string } | null> {
   try {
     const response = await githubApiRequest<GitHubContentResponse>(
-      `${GITHUB_API_URL}/repos/${owner}/${REPO_NAME}/contents/notes/${noteId}.md`,
+      `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/notes/${noteId}.md`,
       {
         headers: getHeaders(token),
       }
@@ -96,7 +97,7 @@ export async function getNote(
     return { content, sha: response.sha };
   } catch (error) {
     // It's okay if the note doesn't exist, so we can ignore 404 errors.
-    if (error instanceof Error && error.message.includes("404")) {
+    if (error instanceof Error && error.message.includes('404')) {
       return null;
     }
     throw error;
@@ -105,14 +106,15 @@ export async function getNote(
 
 export async function upsertNote(
   token: string,
+  repo: string,
   noteId: string,
   content: string,
   sha?: string
-): Promise<void> {
-  await githubApiRequest(
-    `${GITHUB_API_URL}/repos/${owner}/${REPO_NAME}/contents/notes/${noteId}.md`,
+): Promise<{ sha: string }> {
+  const response = await githubApiRequest<{ content: { sha: string } }>(
+    `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/notes/${noteId}.md`,
     {
-      method: "PUT",
+      method: 'PUT',
       headers: getHeaders(token),
       body: JSON.stringify({
         message: `upsert note ${noteId}`,
@@ -121,17 +123,19 @@ export async function upsertNote(
       }),
     }
   );
+  return { sha: response.content.sha };
 }
 
 export async function deleteNote(
   token: string,
+  repo: string,
   noteId: string,
   sha: string
 ): Promise<void> {
   await githubApiRequest(
-    `${GITHUB_API_URL}/repos/${owner}/${REPO_NAME}/contents/notes/${noteId}.md`,
+    `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/notes/${noteId}.md`,
     {
-      method: "DELETE",
+      method: 'DELETE',
       headers: getHeaders(token),
       body: JSON.stringify({
         message: `delete note ${noteId}`,
@@ -140,4 +144,26 @@ export async function deleteNote(
     },
     false
   );
+}
+
+// Get all notes from the repo
+export async function getAllNotes(
+  token: string,
+  repo: string
+): Promise<GitHubContentResponse[]> {
+  try {
+    const response = await githubApiRequest<GitHubContentResponse[]>(
+      `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/notes`,
+      {
+        headers: getHeaders(token),
+      }
+    );
+    return response;
+  } catch (error) {
+    // If the notes directory doesn't exist, return an empty array
+    if (error instanceof Error && error.message.includes('404')) {
+      return [];
+    }
+    throw error;
+  }
 }

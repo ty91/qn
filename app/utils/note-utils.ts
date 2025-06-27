@@ -54,7 +54,7 @@ export function toDate(value: any): Date {
 }
 
 // Format note content with frontmatter for GitHub
-export function formatNoteWithFrontmatter(note: Note): string {
+export function formatNote(note: Note): string {
   const frontmatter = `---
 id: ${note.id}
 created: ${note.createdAt.toISOString()}
@@ -70,7 +70,7 @@ export function getNoteFilename(noteId: string): string {
 }
 
 // Parse note content with frontmatter from GitHub
-export function parseNoteWithFrontmatter(content: string): { meta: any; body: string } {
+export function parseNote(content: string): { meta: any; body: string } {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   
   if (match) {
