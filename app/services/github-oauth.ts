@@ -8,12 +8,8 @@ import * as WebBrowser from "expo-web-browser";
 
 WebBrowser.maybeCompleteAuthSession();
 
-// GitHub OAuth configuration
-// Note: In production, use environment variables or secure configuration
-const CLIENT_ID =
-  Constants.expoConfig?.extra?.githubClientId || "YOUR_GITHUB_CLIENT_ID";
+const CLIENT_ID = Constants.expoConfig!.extra!.githubClientId;
 
-// Discovery URLs for GitHub
 const discovery = {
   authorizationEndpoint: "https://github.com/login/oauth/authorize",
   tokenEndpoint: "https://github.com/login/oauth/access_token",

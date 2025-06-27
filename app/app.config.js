@@ -41,7 +41,7 @@ export default {
       typedRoutes: true
     },
     extra: {
-      githubClientId: process.env.GITHUB_CLIENT_ID || "YOUR_GITHUB_CLIENT_ID",
+      githubClientId: process.env.GITHUB_CLIENT_ID,
     }
   }
 };
